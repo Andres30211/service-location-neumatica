@@ -52,7 +52,7 @@ public class SecurityConfig {
                          * health checks posteriormente.
                          */
                         .requestMatchers(
-                                "/actuator/health"
+                                "/api/attendance/**"
                         ).permitAll()
 
 
