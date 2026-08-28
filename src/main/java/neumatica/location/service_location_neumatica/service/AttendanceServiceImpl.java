@@ -2,6 +2,7 @@ package neumatica.location.service_location_neumatica.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -105,7 +106,7 @@ public class AttendanceServiceImpl implements AttendanceService {
                         )
 
                         .createdAt(
-                                LocalDateTime.now()
+                                LocalDateTime.now(ZoneId.of("America/Bogota"))
                         )
 
                         .build();
@@ -146,11 +147,11 @@ public class AttendanceServiceImpl implements AttendanceService {
                          * el día de la asistencia.
                          */
                         .attendanceDate(
-                                LocalDate.now()
+                                LocalDate.now(ZoneId.of("America/Bogota"))
                         )
 
                         .checkInAt(
-                                LocalDateTime.now()
+                                LocalDateTime.now(ZoneId.of("America/Bogota"))
                         )
 
                         .checkOutAt(null)
@@ -207,7 +208,7 @@ public class AttendanceServiceImpl implements AttendanceService {
 
 
         attendance.setCheckOutAt(
-                LocalDateTime.now()
+                LocalDateTime.now(ZoneId.of("America/Bogota"))
         );
 
 
