@@ -99,7 +99,7 @@ public class AttendanceController {
     }
 
 
-    /**
+    /*
      * =========================================================
      * MIS ASISTENCIAS
      * =========================================================
@@ -130,7 +130,7 @@ public class AttendanceController {
     }
 
 
-    /**
+    /*
      * =========================================================
      * ASISTENCIA ACTUAL
      * =========================================================
@@ -161,7 +161,7 @@ public class AttendanceController {
     }
 
 
-    /**
+    /*
      * =========================================================
      * ASISTENCIAS DE UNA FECHA
      * =========================================================
@@ -209,5 +209,12 @@ public class AttendanceController {
                         authorization
                 )
         );
+    }
+    
+    @GetMapping("/today")
+    public ResponseEntity<List<AttendanceResponse>> getFindAll(){
+    	
+    	return ResponseEntity.ok(attendanceService.getFindAll());
+    	
     }
 }

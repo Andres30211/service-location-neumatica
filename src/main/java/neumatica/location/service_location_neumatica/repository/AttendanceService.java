@@ -60,4 +60,8 @@ public interface AttendanceService {
             LocalDate date,
             String authorization
     );
+    
+    List<AttendanceResponse> getFindAll();
+    
+    
 }

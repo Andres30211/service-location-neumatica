@@ -25,8 +25,7 @@ import neumatica.location.service_location_neumatica.repository.LocationReposito
  */
 @Service
 @RequiredArgsConstructor
-public class AttendanceServiceImpl
-        implements AttendanceService {
+public class AttendanceServiceImpl implements AttendanceService {
 
 
     private final AttendanceRepository attendanceRepository;
@@ -49,7 +48,7 @@ public class AttendanceServiceImpl
     private static final double COMPANY_RADIUS_METERS = 100.0;
 
 
-    /**
+    /*
      * =========================================================
      * CHECK-IN
      * =========================================================
@@ -179,7 +178,7 @@ public class AttendanceServiceImpl
     }
 
 
-    /**
+    /*
      * =========================================================
      * CHECK-OUT
      * =========================================================
@@ -221,8 +220,8 @@ public class AttendanceServiceImpl
         );
     }
 
-
-    /**
+    
+    /*
      * =========================================================
      * HISTORIAL DEL USUARIO
      * =========================================================
@@ -242,7 +241,7 @@ public class AttendanceServiceImpl
     }
 
 
-    /**
+    /*
      * =========================================================
      * ASISTENCIA ACTUAL
      * =========================================================
@@ -271,9 +270,17 @@ public class AttendanceServiceImpl
                 attendance
         );
     }
+    
+    @Override
+    public List<AttendanceResponse> getFindAll(){
+    	return this.attendanceRepository.findAll()
+    			.stream()
+    			.map(AttendanceResponse::fromEntity)
+    			.toList();
+    }
 
 
-    /**
+    /*
      * =========================================================
      * ASISTENCIAS DE UNA FECHA
      * =========================================================
@@ -341,7 +348,7 @@ public class AttendanceServiceImpl
     }
 
 
-    /**
+    /*
      * =========================================================
      * CALCULAR DISTANCIA
      * =========================================================
