@@ -44,9 +44,9 @@ public class AttendanceServiceImpl implements AttendanceService {
      * =========================================================
      */
 
-    private static final double COMPANY_LATITUDE = 6.244203;
+    private static final double COMPANY_LATITUDE = 6.242606600721737;
 
-    private static final double COMPANY_LONGITUDE = -75.581211;
+    private static final double COMPANY_LONGITUDE = -75.57174193971318;
 
     private static final double COMPANY_RADIUS_METERS = 100.0;
 
