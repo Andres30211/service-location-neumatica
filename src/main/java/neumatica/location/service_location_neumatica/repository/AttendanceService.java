@@ -1,12 +1,18 @@
 package neumatica.location.service_location_neumatica.repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
 import neumatica.location.service_location_neumatica.dto.AttendanceResponse;
 import neumatica.location.service_location_neumatica.dto.CheckInRequest;
 
+
+/*
+ * Contrato del servicio de asistencias.
+ */
 public interface AttendanceService {
+
 
     /*
      * Registrar entrada.
@@ -16,6 +22,7 @@ public interface AttendanceService {
             CheckInRequest request
     );
 
+
     /*
      * Registrar salida.
      */
@@ -23,17 +30,34 @@ public interface AttendanceService {
             UUID userId
     );
 
+
     /*
-     * Obtener historial del usuario.
+     * Historial del vendedor autenticado.
      */
     List<AttendanceResponse> getUserAttendances(
             UUID userId
     );
 
+
     /*
-     * Obtener asistencia actualmente abierta.
+     * Asistencia actualmente abierta.
      */
     AttendanceResponse getCurrentAttendance(
             UUID userId
+    );
+
+
+    /*
+     * =========================================================
+     * ASISTENCIAS DE UNA FECHA
+     * =========================================================
+     *
+     * Permite al administrador consultar
+     * todos los vendedores que registraron
+     * asistencia durante un día.
+     */
+    List<AttendanceResponse> getAttendancesByDate(
+            LocalDate date,
+            String authorization
     );
 }

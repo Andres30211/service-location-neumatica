@@ -1,59 +1,73 @@
 package neumatica.location.service_location_neumatica.service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+
 import neumatica.location.service_location_neumatica.dto.AttendanceResponse;
 import neumatica.location.service_location_neumatica.dto.CheckInRequest;
+import neumatica.location.service_location_neumatica.dto.UserResponse;
 import neumatica.location.service_location_neumatica.entity.Attendance;
 import neumatica.location.service_location_neumatica.entity.Location;
 import neumatica.location.service_location_neumatica.repository.AttendanceRepository;
 import neumatica.location.service_location_neumatica.repository.AttendanceService;
 import neumatica.location.service_location_neumatica.repository.LocationRepository;
 
+
+/*
+ * Implementación del servicio de asistencias.
+ */
 @Service
 @RequiredArgsConstructor
-public class AttendanceServiceImpl implements AttendanceService {
+public class AttendanceServiceImpl
+        implements AttendanceService {
 
-	@Autowired
-    private AttendanceRepository attendanceRepository;
 
-	@Autowired
-    private LocationRepository locationRepository;
+    private final AttendanceRepository attendanceRepository;
+
+    private final LocationRepository locationRepository;
+
+    private final UserService userService;
+
 
     /*
-     * Coordenadas de la empresa.
-     *
-     * CAMBIA ESTOS VALORES POR LOS DE TU EMPRESA.
+     * =========================================================
+     * CONFIGURACIÓN DE LA EMPRESA
+     * =========================================================
      */
+
     private static final double COMPANY_LATITUDE = 6.244203;
 
     private static final double COMPANY_LONGITUDE = -75.581211;
 
-    /*
-     * Radio permitido en metros.
-     *
-     * Por ejemplo:
-     * 100 metros alrededor de la empresa.
-     */
     private static final double COMPANY_RADIUS_METERS = 100.0;
 
 
+    /**
+     * =========================================================
+     * CHECK-IN
+     * =========================================================
+     */
     @Override
     @Transactional
     public AttendanceResponse checkIn(
+
             UUID userId,
+
             CheckInRequest request
+
     ) {
 
+
         /*
-         * Verificamos si ya existe una asistencia abierta.
+         * Verificamos si el vendedor ya tiene
+         * una asistencia abierta.
          */
         attendanceRepository
                 .findFirstByUserIdAndCheckOutAtIsNullOrderByCheckInAtDesc(
@@ -64,47 +78,60 @@ public class AttendanceServiceImpl implements AttendanceService {
                     throw new RuntimeException(
                             "El usuario ya tiene una asistencia abierta"
                     );
-
                 });
 
 
         /*
-         * Creamos la ubicación.
+         * =====================================================
+         * CREAR LOCATION
+         * =====================================================
          */
-        Location location = Location.builder()
+        Location location =
+                Location.builder()
 
-                .userId(userId)
+                        .userId(userId)
 
-                .latitude(request.latitude())
+                        .latitude(
+                                request.latitude()
+                        )
 
-                .longitude(request.longitude())
+                        .longitude(
+                                request.longitude()
+                        )
 
-                .accuracy(request.accuracy())
+                        .accuracy(
+                                request.accuracy()
+                        )
 
-                .createdAt(LocalDateTime.now())
+                        .createdAt(
+                                LocalDateTime.now()
+                        )
 
-                .build();
+                        .build();
 
 
-        /*
-         * Guardamos la ubicación.
-         */
         Location savedLocation =
                 locationRepository.save(location);
 
 
         /*
-         * Calculamos si está dentro de la empresa.
+         * =====================================================
+         * DETERMINAR SI ESTÁ DENTRO DE LA EMPRESA
+         * =====================================================
          */
         boolean insideCompany =
                 isInsideCompany(
+
                         request.latitude(),
+
                         request.longitude()
                 );
 
 
         /*
-         * Creamos la asistencia.
+         * =====================================================
+         * CREAR ASISTENCIA
+         * =====================================================
          */
         Attendance attendance =
                 Attendance.builder()
@@ -113,37 +140,59 @@ public class AttendanceServiceImpl implements AttendanceService {
 
                         .location(savedLocation)
 
-                        .checkInAt(LocalDateTime.now())
+                        /*
+                         * Guardamos explícitamente
+                         * el día de la asistencia.
+                         */
+                        .attendanceDate(
+                                LocalDate.now()
+                        )
+
+                        .checkInAt(
+                                LocalDateTime.now()
+                        )
 
                         .checkOutAt(null)
 
-                        .insideCompany(insideCompany)
+                        .insideCompany(
+                                insideCompany
+                        )
 
                         .build();
 
 
-        /*
-         * Guardamos asistencia.
-         */
         Attendance savedAttendance =
-                attendanceRepository.save(attendance);
+                attendanceRepository.save(
+                        attendance
+                );
 
 
+        /*
+         * Durante el check-in no necesitamos
+         * consultar nuevamente al security-service.
+         *
+         * El vendedor ya está autenticado.
+         */
         return AttendanceResponse.fromEntity(
                 savedAttendance
         );
     }
 
 
+    /**
+     * =========================================================
+     * CHECK-OUT
+     * =========================================================
+     */
     @Override
     @Transactional
     public AttendanceResponse checkOut(
+
             UUID userId
+
     ) {
 
-        /*
-         * Buscamos la asistencia abierta.
-         */
+
         Attendance attendance =
                 attendanceRepository
                         .findFirstByUserIdAndCheckOutAtIsNullOrderByCheckInAtDesc(
@@ -156,16 +205,15 @@ public class AttendanceServiceImpl implements AttendanceService {
                         );
 
 
-        /*
-         * Registramos la hora de salida.
-         */
         attendance.setCheckOutAt(
                 LocalDateTime.now()
         );
 
 
         Attendance updatedAttendance =
-                attendanceRepository.save(attendance);
+                attendanceRepository.save(
+                        attendance
+                );
 
 
         return AttendanceResponse.fromEntity(
@@ -174,9 +222,16 @@ public class AttendanceServiceImpl implements AttendanceService {
     }
 
 
+    /**
+     * =========================================================
+     * HISTORIAL DEL USUARIO
+     * =========================================================
+     */
     @Override
     public List<AttendanceResponse> getUserAttendances(
+
             UUID userId
+
     ) {
 
         return attendanceRepository
@@ -187,10 +242,18 @@ public class AttendanceServiceImpl implements AttendanceService {
     }
 
 
+    /**
+     * =========================================================
+     * ASISTENCIA ACTUAL
+     * =========================================================
+     */
     @Override
     public AttendanceResponse getCurrentAttendance(
+
             UUID userId
+
     ) {
+
 
         Attendance attendance =
                 attendanceRepository
@@ -203,62 +266,156 @@ public class AttendanceServiceImpl implements AttendanceService {
                                 )
                         );
 
+
         return AttendanceResponse.fromEntity(
                 attendance
         );
     }
 
 
-    /*
-     * Determina si las coordenadas están dentro
-     * del radio de la empresa.
+    /**
+     * =========================================================
+     * ASISTENCIAS DE UNA FECHA
+     * =========================================================
      *
-     * Utilizamos la fórmula de Haversine.
+     * Este método es el que permitirá construir
+     * posteriormente el panel administrativo.
      */
-    private boolean isInsideCompany(
-            double latitude,
-            double longitude
+    @Override
+    public List<AttendanceResponse> getAttendancesByDate(
+
+            LocalDate date,
+
+            String authorization
+
     ) {
 
+
+        /*
+         * Buscamos todas las asistencias del día.
+         */
+        List<Attendance> attendances =
+                attendanceRepository
+                        .findByAttendanceDateOrderByCheckInAtAsc(
+                                date
+                        );
+
+
+        /*
+         * Convertimos cada asistencia
+         * agregando el nombre del vendedor.
+         */
+        return attendances
+                .stream()
+                .map(attendance -> {
+
+
+                    /*
+                     * Obtenemos el UUID que pertenece
+                     * al security-service.
+                     */
+                    UUID userId =
+                            attendance.getUserId();
+
+
+                    /*
+                     * Consultamos al security-service.
+                     */
+                    UserResponse user =
+                            userService.getUserById(
+                                    userId,
+                                    authorization
+                            );
+
+
+                    /*
+                     * Construimos la respuesta
+                     * incluyendo el nombre.
+                     */
+                    return AttendanceResponse.fromEntity(
+                            attendance,
+                            user.name()
+                    );
+                })
+                .toList();
+    }
+
+
+    /**
+     * =========================================================
+     * CALCULAR DISTANCIA
+     * =========================================================
+     *
+     * Fórmula de Haversine.
+     *
+     * Devuelve true cuando el vendedor
+     * está dentro del radio permitido.
+     */
+    private boolean isInsideCompany(
+
+            double latitude,
+
+            double longitude
+
+    ) {
+
+
         double earthRadius = 6371000;
+
 
         double latitudeDifference =
                 Math.toRadians(
                         latitude - COMPANY_LATITUDE
                 );
 
+
         double longitudeDifference =
                 Math.toRadians(
                         longitude - COMPANY_LONGITUDE
                 );
 
+
         double a =
                 Math.sin(latitudeDifference / 2)
-                        * Math.sin(latitudeDifference / 2)
+                        *
+                Math.sin(latitudeDifference / 2)
+
                         +
-                        Math.cos(
-                                Math.toRadians(
-                                        COMPANY_LATITUDE
-                                )
+
+                Math.cos(
+                        Math.toRadians(
+                                COMPANY_LATITUDE
                         )
+                )
+
                         *
-                        Math.cos(
-                                Math.toRadians(latitude)
+
+                Math.cos(
+                        Math.toRadians(
+                                latitude
                         )
+                )
+
                         *
-                        Math.sin(
-                                longitudeDifference / 2
-                        )
+
+                Math.sin(
+                        longitudeDifference / 2
+                )
+
                         *
-                        Math.sin(
-                                longitudeDifference / 2
-                        );
+
+                Math.sin(
+                        longitudeDifference / 2
+                );
+
 
         double c =
-                2 * Math.atan2(
+                2 *
+                Math.atan2(
                         Math.sqrt(a),
                         Math.sqrt(1 - a)
                 );
+
 
         double distance =
                 earthRadius * c;
