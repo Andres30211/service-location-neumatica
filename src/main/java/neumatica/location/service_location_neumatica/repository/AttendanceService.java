@@ -61,7 +61,7 @@ public interface AttendanceService {
             String authorization
     );
     
-    List<AttendanceResponse> getFindAll();
+    List<AttendanceResponse> getFindAll(String authorization);
     
     
 }

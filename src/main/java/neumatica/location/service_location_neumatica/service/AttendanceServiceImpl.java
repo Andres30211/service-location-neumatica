@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-
+import neumatica.location.service_location_neumatica.client.UserClient;
 import neumatica.location.service_location_neumatica.dto.AttendanceResponse;
 import neumatica.location.service_location_neumatica.dto.CheckInRequest;
 import neumatica.location.service_location_neumatica.dto.UserResponse;
@@ -33,6 +33,8 @@ public class AttendanceServiceImpl implements AttendanceService {
     private final LocationRepository locationRepository;
 
     private final UserService userService;
+    
+    private final UserClient userClient;
 
 
     /*
@@ -272,11 +274,24 @@ public class AttendanceServiceImpl implements AttendanceService {
     }
     
     @Override
-    public List<AttendanceResponse> getFindAll(){
-    	return this.attendanceRepository.findAll()
-    			.stream()
-    			.map(AttendanceResponse::fromEntity)
-    			.toList();
+    public List<AttendanceResponse> getFindAll(String authorization) {
+
+        return attendanceRepository.findAll()
+                .stream()
+                .map(attendance -> {
+                	
+
+                    UserResponse user = userClient.getUserById(
+                            attendance.getUserId(),
+                            authorization
+                    );
+
+                    return AttendanceResponse.fromEntity(
+                            attendance,
+                            user.name()
+                    );
+                })
+                .toList();
     }
 
 

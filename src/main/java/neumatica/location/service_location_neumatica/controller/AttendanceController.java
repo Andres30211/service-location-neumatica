@@ -212,9 +212,12 @@ public class AttendanceController {
     }
     
     @GetMapping("/today")
-    public ResponseEntity<List<AttendanceResponse>> getFindAll(){
+    public ResponseEntity<List<AttendanceResponse>> getFindAll(@AuthenticationPrincipal Jwt jwt){
     	
-    	return ResponseEntity.ok(attendanceService.getFindAll());
+    	String authorization =
+                "Bearer " + jwt.getTokenValue();
+    	
+    	return ResponseEntity.ok(attendanceService.getFindAll(authorization));
     	
     }
 }
