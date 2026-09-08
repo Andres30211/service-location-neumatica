@@ -53,7 +53,7 @@ public class SecurityConfig {
                          */
                         .requestMatchers(
                                 "/api/visits/**",
-                                "/api/visits/uploads/**"
+                                "/uploads/**"
                         ).permitAll()
 
 
