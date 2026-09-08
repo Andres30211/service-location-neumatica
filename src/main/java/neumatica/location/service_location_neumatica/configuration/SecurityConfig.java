@@ -52,7 +52,8 @@ public class SecurityConfig {
                          * health checks posteriormente.
                          */
                         .requestMatchers(
-                                "/api/visits/**"
+                                "/api/visits/**",
+                                "/uploads/**"
                         ).permitAll()
 
 
