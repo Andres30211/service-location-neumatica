@@ -2,7 +2,7 @@ package neumatica.location.service_location_neumatica.configuration;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 
@@ -52,6 +52,8 @@ public class SecurityConfig {
                          * health checks posteriormente.
                          */
                         .requestMatchers(
+                        		HttpMethod.OPTIONS,
+                                "/**",
                                 "/api/visits/**",
                                 "/uploads/**"
                         ).permitAll()
