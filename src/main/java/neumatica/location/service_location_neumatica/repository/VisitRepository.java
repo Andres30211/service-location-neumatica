@@ -8,15 +8,12 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
-public interface VisitRepository
-        extends JpaRepository<Visit, UUID> {
+public interface VisitRepository extends JpaRepository<Visit, UUID> {
 
     /*
      * Visitas realizadas por un vendedor.
      */
-    List<Visit> findByUserIdOrderByVisitedAtDesc(
-        UUID userId
-    );
+    List<Visit> findByUserIdOrderByVisitedAtDesc(UUID userId);
 
     /*
      * Todas las visitas ordenadas
@@ -27,8 +24,5 @@ public interface VisitRepository
     /*
      * Visitas realizadas entre dos fechas.
      */
-    List<Visit> findByVisitedAtBetweenOrderByVisitedAtDesc(
-        OffsetDateTime start,
-        OffsetDateTime end
-    );
+    List<Visit> findByVisitedAtBetweenOrderByVisitedAtDesc(OffsetDateTime start,OffsetDateTime end);
 }

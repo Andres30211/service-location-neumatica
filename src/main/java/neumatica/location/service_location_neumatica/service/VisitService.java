@@ -4,18 +4,24 @@ import lombok.RequiredArgsConstructor;
 
 import neumatica.location.service_location_neumatica.dto.UserResponse;
 import neumatica.location.service_location_neumatica.dto.VisitRequest;
-import neumatica.location.service_location_neumatica.dto.VisitResponse;
 import neumatica.location.service_location_neumatica.entity.Visit;
+import neumatica.location.service_location_neumatica.enums.StateVisit;
+import neumatica.location.service_location_neumatica.record.RegisterCheckoutRequest;
+import neumatica.location.service_location_neumatica.record.VisitCreateListDeleteResponse;
 import neumatica.location.service_location_neumatica.repository.VisitRepository;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -44,8 +50,7 @@ public class VisitService {
      *
      * respecto a la raíz desde donde se ejecuta el microservicio.
      */
-    private final Path uploadDirectory =
-            Paths.get("uploads", "visits");
+    private final Path uploadDirectory = Paths.get("uploads", "visits");
 
 
     /*
@@ -54,12 +59,11 @@ public class VisitService {
      * =========================================================
      */
 
-    public VisitResponse createVisit(
-            VisitRequest request,
+    @Transactional
+    public VisitCreateListDeleteResponse createVisit(VisitRequest request,
             MultipartFile image,
             UUID userId,
-            String authorization
-    ) throws IOException {
+            String authorization) throws IOException {
 
         /*
          * -----------------------------------------------------
@@ -67,7 +71,7 @@ public class VisitService {
          * -----------------------------------------------------
          */
 
-        validateImage(image);
+        this.validateImage(image);
 
 
         /*
@@ -76,11 +80,7 @@ public class VisitService {
          * -----------------------------------------------------
          */
 
-        UserResponse user =
-                userService.getUserById(
-                        userId,
-                        authorization
-                );
+        UserResponse user = this.userService.getUserById(userId,authorization);
 
 
         /*
@@ -89,8 +89,7 @@ public class VisitService {
          * -----------------------------------------------------
          */
 
-        String imageUrl =
-                saveImage(image);
+        String imageUrl = this.saveImage(image);
 
 
         /*
@@ -98,42 +97,21 @@ public class VisitService {
          * 4. Crear entidad
          * -----------------------------------------------------
          */
-
-        Visit visit =
-                Visit.builder()
-
+Visit visit = Visit.builder()
                         .userId(userId)
-
-                        .companyName(
-                                request.getCompanyName().trim()
-                        )
-
-                        .comment(
-                                request.getComment().trim()
-                        )
-
+                        .companyName(request.getCompanyName().trim())
+                        .comment(request.getComment().trim())
                         .imageUrl(imageUrl)
-
-                        .latitude(
-                                request.getLatitude()
-                        )
-
-                        .longitude(
-                                request.getLongitude()
-                        )
-
-                        .accuracy(
-                                request.getAccuracy()
-                        )
-
-                        .visitedAt(
-                                OffsetDateTime.now()
-                        )
-
-                        .createdAt(
-                                OffsetDateTime.now()
-                        )
-
+                        .latitude(request.getLatitude())
+                        .longitude(request.getLongitude())
+                        .accuracy(request.getAccuracy())
+                        .visitedAt(OffsetDateTime.now())
+                        .createdAt(OffsetDateTime.now())
+                        .departureLatitude(null)
+                        .departureLongitude(null)
+                        .precisionGpsOutput(null)
+                        .departureDateTime(null)
+                        .state(StateVisit.ON_GOING)
                         .build();
 
 
@@ -143,8 +121,7 @@ public class VisitService {
          * -----------------------------------------------------
          */
 
-        Visit saved =
-                visitRepository.save(visit);
+        Visit saved = this.visitRepository.save(visit);
 
 
         /*
@@ -153,10 +130,38 @@ public class VisitService {
          * -----------------------------------------------------
          */
 
-        return toResponse(
-                saved,
-                user
-        );
+        return toVisitResponse(saved,user);
+    }
+    
+    @Transactional
+    public VisitCreateListDeleteResponse registrarSalida(UUID id,
+    		UUID userId,
+            String authorization,
+    		RegisterCheckoutRequest request) {
+
+        Visit visit = this.visitRepository.findById(id)
+            .orElseThrow(() ->
+                new EntityNotFoundException("Visita no encontrada"));
+
+        if (visit.getState() != StateVisit.ON_GOING) {
+            throw new RuntimeException(
+                "La visita ya está finalizada.");
+        }
+        
+        UserResponse user = this.userService.getUserById(userId,authorization);
+
+        visit.setDepartureLatitude(request.departureLatitude());
+        visit.setDepartureLongitude(request.departureLongitude());
+        visit.setPrecisionGpsOutput(request.precisionGpsOutput());
+
+        // El servidor determina la hora de salida.
+        visit.setDepartureDateTime(LocalDateTime.now());
+
+        visit.setState(StateVisit.FINALIZED);
+
+        this.visitRepository.save(visit);
+
+        return this.toVisitResponse(visit, user);
     }
 
 
@@ -166,28 +171,14 @@ public class VisitService {
      * =========================================================
      */
 
-    public List<VisitResponse> getMyVisits(
-            UUID userId,
-            String authorization
-    ) {
+    public List<VisitCreateListDeleteResponse> getMyVisits(UUID userId, String authorization) {
 
-        UserResponse user =
-                userService.getUserById(
-                        userId,
-                        authorization
-                );
+        UserResponse user = userService.getUserById(userId, authorization);
 
 
-        return visitRepository
-                .findByUserIdOrderByVisitedAtDesc(userId)
+        return this.visitRepository.findByUserIdOrderByVisitedAtDesc(userId)
                 .stream()
-                .map(
-                        visit ->
-                                toResponse(
-                                        visit,
-                                        user
-                                )
-                )
+                .map(visit -> this.toVisitResponse(visit, user))
                 .toList();
     }
 
@@ -198,29 +189,17 @@ public class VisitService {
      * =========================================================
      */
 
-    public List<VisitResponse> getAllVisits(
-            String authorization
-    ) {
+    public List<VisitCreateListDeleteResponse> getAllVisits(String authorization) {
 
         return visitRepository
                 .findAllByOrderByVisitedAtDesc()
                 .stream()
-                .map(
-                        visit -> {
+                .map(visit -> {
 
-                            UserResponse user =
-                                    userService.getUserById(
-                                            visit.getUserId(),
-                                            authorization
-                                    );
+                	UserResponse user = this.userService.getUserById(visit.getUserId(), authorization);
 
-                            return toResponse(
-                                    visit,
-                                    user
-                            );
-                        }
-                )
-                .toList();
+                	return this.toVisitResponse(visit, user);
+                }).toList();
     }
 
 
@@ -229,33 +208,97 @@ public class VisitService {
      * BUSCAR VISITA POR ID
      * =========================================================
      */
+    
+    public VisitCreateListDeleteResponse getVisitDeleteInfo(UUID visitId, String authorization) {
 
-    public VisitResponse getById(
-            UUID visitId,
-            String authorization
-    ) {
+        Visit visit = this.visitRepository.findById(visitId)
+                        .orElseThrow(() -> new RuntimeException("Visita no encontrada."));
 
-        Visit visit =
-                visitRepository
-                        .findById(visitId)
-                        .orElseThrow(
-                                () -> new RuntimeException(
-                                        "Visita no encontrada."
-                                )
-                        );
+        UserResponse user = this.userService.getUserById(visit.getUserId(), authorization);
 
+        return new VisitCreateListDeleteResponse(visit.getId(),
+        		visit.getUserId(),
+        		user.getName(),
+        		visit.getCompanyName(),
+        		visit.getComment(),
+        		null,
+        		null,
+        		null,
+        		null,
+        		null,
+        		visit.getCreatedAt(),
+        		null,
+        		null,
+        		null,
+        		null,
+        		null);
+    }
 
-        UserResponse user =
-                userService.getUserById(
-                        visit.getUserId(),
-                        authorization
+    /*public VisitResponse getById(UUID visitId, String authorization) {
+
+        Visit visit = this.visitRepository.findById(visitId)
+                        .orElseThrow(() -> new RuntimeException("Visita no encontrada."));
+
+        UserResponse user = this.userService.getUserById(visit.getUserId(), authorization);
+
+        return toResponse(visit,user);
+    }*/
+    
+    /*
+     * =========================================================
+     * ELIMINAR VISITA
+     * =========================================================
+     */
+    
+    public void deleteVisit(UUID visitId) {
+
+        Visit visit = visitRepository.findById(visitId)
+            .orElseThrow(() ->
+                new EntityNotFoundException(
+                    "No se encontró la visita con id: " + visitId
+                )
+            );
+
+        String imageUrl = visit.getImageUrl();
+
+        // Eliminar el registro de la visita.
+        visitRepository.delete(visit);
+
+        // Eliminar la imagen asociada, si existe.
+        if (imageUrl != null && !imageUrl.isBlank()) {
+            try {
+                // Obtener únicamente el nombre del archivo.
+                String fileName = Paths.get(imageUrl)
+                    .getFileName()
+                    .toString();
+
+                // Directorio físico donde se guardan las imágenes.
+                Path uploadPath = Paths.get("uploads")
+                    .toAbsolutePath()
+                    .normalize();
+
+                Path visitsPath = uploadPath.resolve("visits").normalize();
+
+                Path imagePath = visitsPath.resolve(fileName).normalize();
+
+                // Validar que el archivo permanezca dentro del directorio.
+                if (!imagePath.startsWith(visitsPath)) {
+                    throw new SecurityException(
+                        "Ruta de imagen no permitida"
+                    );
+                }
+
+                // Eliminar el archivo si existe.
+                Files.deleteIfExists(imagePath);
+
+            } catch (IOException e) {
+                throw new IllegalStateException(
+                    "No se pudo eliminar la imagen de la visita.",
+                    e
                 );
-
-
-        return toResponse(
-                visit,
-                user
-        );
+            }
+        
+        }
     }
 
 
@@ -265,9 +308,7 @@ public class VisitService {
      * =========================================================
      */
 
-    private String saveImage(
-            MultipartFile image
-    ) throws IOException {
+    private String saveImage(MultipartFile image) throws IOException {
 
         /*
          * -----------------------------------------------------
@@ -275,10 +316,7 @@ public class VisitService {
          * -----------------------------------------------------
          */
 
-        Files.createDirectories(
-                uploadDirectory
-        );
-
+        Files.createDirectories(uploadDirectory);
 
         /*
          * -----------------------------------------------------
@@ -286,22 +324,15 @@ public class VisitService {
          * -----------------------------------------------------
          */
 
-        String originalFilename =
-                image.getOriginalFilename();
+        String originalFilename = image.getOriginalFilename();
 
 
         String extension = "";
 
 
-        if (
-                originalFilename != null &&
-                originalFilename.contains(".")
-        ) {
+        if (originalFilename != null && originalFilename.contains(".")) {
 
-            extension =
-                    originalFilename.substring(
-                            originalFilename.lastIndexOf(".")
-                    ).toLowerCase();
+            extension = originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase();
         }
 
 
@@ -318,9 +349,7 @@ public class VisitService {
          * 550e8400-e29b-41d4-a716-446655440000.jpg
          */
 
-        String fileName =
-                UUID.randomUUID() + extension;
-
+        String fileName = UUID.randomUUID() + extension;
 
         /*
          * -----------------------------------------------------
@@ -328,9 +357,7 @@ public class VisitService {
          * -----------------------------------------------------
          */
 
-        Path destination =
-                uploadDirectory.resolve(fileName);
-
+        Path destination = uploadDirectory.resolve(fileName);
 
         /*
          * -----------------------------------------------------
@@ -338,12 +365,7 @@ public class VisitService {
          * -----------------------------------------------------
          */
 
-        Files.copy(
-                image.getInputStream(),
-                destination,
-                StandardCopyOption.REPLACE_EXISTING
-        );
-
+        Files.copy(image.getInputStream(), destination, StandardCopyOption.REPLACE_EXISTING);
 
         /*
          * -----------------------------------------------------
@@ -367,60 +389,24 @@ public class VisitService {
      * =========================================================
      */
 
-    private VisitResponse toResponse(
-            Visit visit,
-            UserResponse user
-    ) {
+    private VisitCreateListDeleteResponse toVisitResponse(Visit visit, UserResponse user) {
 
-        return VisitResponse.builder()
-
-                .id(
-                        visit.getId()
-                )
-
-                .userId(
-                        visit.getUserId()
-                )
-
-                .userName(
-                        user != null
-                                ? user.getName()
-                                : "Usuario"
-                )
-
-                .companyName(
-                        visit.getCompanyName()
-                )
-
-                .comment(
-                        visit.getComment()
-                )
-
-                .imageUrl(
-                        visit.getImageUrl()
-                )
-
-                .latitude(
-                        visit.getLatitude()
-                )
-
-                .longitude(
-                        visit.getLongitude()
-                )
-
-                .accuracy(
-                        visit.getAccuracy()
-                )
-
-                .visitedAt(
-                        visit.getVisitedAt()
-                )
-
-                .createdAt(
-                        visit.getCreatedAt()
-                )
-
-                .build();
+        return new VisitCreateListDeleteResponse(visit.getId(),
+        		visit.getUserId(),
+        		user != null ? user.getName() : "Usuario",
+        		visit.getCompanyName(),
+        		visit.getComment(),
+        		visit.getImageUrl(),
+        		visit.getLatitude(),
+        		visit.getLongitude(),
+        		visit.getAccuracy(),
+        		visit.getVisitedAt(),
+        		visit.getCreatedAt(),
+        		visit.getDepartureLatitude(),
+        		visit.getDepartureLongitude(),
+        		visit.getPrecisionGpsOutput(),
+        		visit.getDepartureDateTime(),
+        		visit.getState());
     }
 
 
@@ -430,9 +416,7 @@ public class VisitService {
      * =========================================================
      */
 
-    private void validateImage(
-            MultipartFile image
-    ) {
+    private void validateImage(MultipartFile image) {
 
         /*
          * -----------------------------------------------------
@@ -440,14 +424,9 @@ public class VisitService {
          * -----------------------------------------------------
          */
 
-        if (
-                image == null ||
-                image.isEmpty()
-        ) {
+        if (image == null || image.isEmpty()) {
 
-            throw new IllegalArgumentException(
-                    "Debes subir una fotografía."
-            );
+            throw new IllegalArgumentException("Debes subir una fotografía.");
         }
 
 
@@ -457,20 +436,12 @@ public class VisitService {
          * -----------------------------------------------------
          */
 
-        String contentType =
-                image.getContentType();
+        String contentType = image.getContentType();
 
+        if (contentType == null || !contentType.startsWith("image/")) {
 
-        if (
-                contentType == null ||
-                !contentType.startsWith("image/")
-        ) {
-
-            throw new IllegalArgumentException(
-                    "El archivo debe ser una imagen."
-            );
+            throw new IllegalArgumentException("El archivo debe ser una imagen.");
         }
-
 
         /*
          * -----------------------------------------------------
@@ -478,17 +449,11 @@ public class VisitService {
          * -----------------------------------------------------
          */
 
-        long maxSize =
-                5L * 1024 * 1024;
+        long maxSize = 5L * 1024 * 1024;
 
+        if (image.getSize() > maxSize) {
 
-        if (
-                image.getSize() > maxSize
-        ) {
-
-            throw new IllegalArgumentException(
-                    "La imagen no puede superar 5 MB."
-            );
+            throw new IllegalArgumentException("La imagen no puede superar 5 MB.");
         }
     }
 }

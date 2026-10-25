@@ -53,12 +53,14 @@ public class SecurityConfig {
                          */
                         .requestMatchers(
                         		HttpMethod.OPTIONS,
-                                "/**",
-                                "/api/visits/**",
-                                "/uploads/**"
+                                "/**"
                         ).permitAll()
-
-
+                        
+                        .requestMatchers(
+                        		"/api/visits/**", "/uploads/**")
+                        .authenticated()
+                        
+                        
                         /*
                          * Todo lo demás requiere
                          * autenticación.

@@ -2,7 +2,9 @@ package neumatica.location.service_location_neumatica.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import neumatica.location.service_location_neumatica.enums.StateVisit;
 
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -37,21 +39,13 @@ public class Visit {
     /*
      * Nombre de la empresa visitada.
      */
-    @Column(
-        name = "company_name",
-        nullable = false,
-        length = 200
-    )
+    @Column(name = "company_name", nullable = false, length = 200)
     private String companyName;
 
     /*
      * Comentario realizado por el vendedor.
      */
-    @Column(
-        name = "comment",
-        nullable = false,
-        columnDefinition = "TEXT"
-    )
+    @Column(name = "comment", nullable = false, columnDefinition = "TEXT")
     private String comment;
 
     /*
@@ -60,11 +54,7 @@ public class Visit {
      * La imagen NO se almacena directamente
      * en PostgreSQL.
      */
-    @Column(
-        name = "image_url",
-        nullable = false,
-        columnDefinition = "TEXT"
-    )
+    @Column(name = "image_url", nullable = false, columnDefinition = "TEXT")
     private String imageUrl;
 
     /*
@@ -86,18 +76,22 @@ public class Visit {
      * Fecha/hora en que el vendedor
      * realizó la visita.
      */
-    @Column(
-        name = "visited_at",
-        nullable = false
-    )
+    @Column(name = "visited_at", nullable = false)
     private OffsetDateTime visitedAt;
 
     /*
      * Fecha/hora de creación del registro.
      */
-    @Column(
-        name = "created_at",
-        nullable = false
-    )
+    @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
+    
+    private Double departureLatitude;
+    private Double departureLongitude;
+
+    private Double precisionGpsOutput;
+
+    private LocalDateTime departureDateTime;
+
+    @Enumerated(EnumType.STRING)
+    private StateVisit state;
 }
