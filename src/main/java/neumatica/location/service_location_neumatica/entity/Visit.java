@@ -90,7 +90,7 @@ public class Visit {
 
     private Double precisionGpsOutput;
 
-    private LocalDateTime departureDateTime;
+    private OffsetDateTime departureDateTime;
 
     @Enumerated(EnumType.STRING)
     private StateVisit state;

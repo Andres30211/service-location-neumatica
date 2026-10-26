@@ -97,22 +97,22 @@ public class VisitService {
          * 4. Crear entidad
          * -----------------------------------------------------
          */
-Visit visit = Visit.builder()
-                        .userId(userId)
-                        .companyName(request.getCompanyName().trim())
-                        .comment(request.getComment().trim())
-                        .imageUrl(imageUrl)
-                        .latitude(request.getLatitude())
-                        .longitude(request.getLongitude())
-                        .accuracy(request.getAccuracy())
-                        .visitedAt(OffsetDateTime.now())
-                        .createdAt(OffsetDateTime.now())
-                        .departureLatitude(null)
-                        .departureLongitude(null)
-                        .precisionGpsOutput(null)
-                        .departureDateTime(null)
-                        .state(StateVisit.ON_GOING)
-                        .build();
+		Visit visit = Visit.builder()
+		                        .userId(userId)
+		                        .companyName(request.getCompanyName().trim())
+		                        .comment(request.getComment().trim())
+		                        .imageUrl(imageUrl)
+		                        .latitude(request.getLatitude())
+		                        .longitude(request.getLongitude())
+		                        .accuracy(request.getAccuracy())
+		                        .visitedAt(OffsetDateTime.now())
+		                        .createdAt(OffsetDateTime.now())
+		                        .departureLatitude(null)
+		                        .departureLongitude(null)
+		                        .precisionGpsOutput(null)
+		                        .departureDateTime(null)
+		                        .state(StateVisit.ON_GOING)
+		                        .build();
 
 
         /*
@@ -155,7 +155,7 @@ Visit visit = Visit.builder()
         visit.setPrecisionGpsOutput(request.precisionGpsOutput());
 
         // El servidor determina la hora de salida.
-        visit.setDepartureDateTime(LocalDateTime.now());
+        visit.setDepartureDateTime(OffsetDateTime.now());
 
         visit.setState(StateVisit.FINALIZED);
 
