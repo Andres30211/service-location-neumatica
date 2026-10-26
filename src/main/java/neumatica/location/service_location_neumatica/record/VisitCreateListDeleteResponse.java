@@ -36,7 +36,7 @@ public record VisitCreateListDeleteResponse(
 
 		 Double precisionGpsOutput,
 
-		 LocalDateTime departureDateTime,
+		 OffsetDateTime departureDateTime,
 
 		 StateVisit state) {
 
